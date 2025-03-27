@@ -2,6 +2,7 @@ const crypto = require("crypto");
 
 const bcrypt = require("bcryptjs");
 const User = require("../models/user");
+const exValidatorRes = require("express-validator").validationResult;
 
 exports.getLogin = (req, res, next) => {
   let message = req.flash("error");
@@ -54,7 +55,15 @@ exports.postLogin = (req, res, next) => {
 };
 
 exports.postSignup = (req, res, next) => {
-  const { email, password, confirmPassword } = req.body;
+  const { email, password } = req.body;
+  const errors = exValidatorRes(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).render("auth/signup", {
+      path: "/signup",
+      pageTitle: "Signup",
+      errorMessage: errors.array()[0].msg,
+    });
+  }
   User.findOne({ email: email })
     .then((userDoc) => {
       if (userDoc) {
@@ -168,9 +177,10 @@ exports.postNewPassword = (req, res, next) => {
       resetUser.password = hashedPassword;
       resetUser.resetToken = undefined;
       resetUser.resetTokenExpiration = undefined;
-      return resetUser.save()
-    }).then(reset => {
-      res.redirect('/login')
+      return resetUser.save();
+    })
+    .then((reset) => {
+      res.redirect("/login");
     })
     .catch((err) => {
       console.log(err);
